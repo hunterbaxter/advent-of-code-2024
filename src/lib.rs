@@ -1,5 +1,6 @@
-use std::{env, fs};
+#![feature(portable_simd)]
 
+use std::{env, fs};
 extern crate aoc_runner;
 
 #[macro_use]

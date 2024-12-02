@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 // NOTE: we are not using a generator, and parsing will be separate from the actual logic
-pub fn input_generator(input: &str) -> (Vec<u32>, Vec<u32>) {
+pub fn input_generator_v0(input: &str) -> (Vec<u32>, Vec<u32>) {
     let (numbers1, numbers2): (Vec<u32>, Vec<u32>) = input
         .lines()
         .map(|line| {
@@ -17,8 +17,50 @@ pub fn input_generator(input: &str) -> (Vec<u32>, Vec<u32>) {
     (numbers1, numbers2)
 }
 
+// We are going to improve our parsing
+// - Each line is number separated by 3 spaces and a new line, which is at most 5 digits and at least one digit per the example, which means u32.
+// - As a result, we will have at most 14 bytes per line, and they are all ASCII
+// - We can therefore work with 4 lines at once per CPU core, which we know is two for a standard Ubuntu-latest on github actions
+pub fn input_generator_v1(input: &str) -> (Vec<u32>, Vec<u32>) {
+    // Pre-allocate vectors to prevent resizing operations
+    let line_count = input.lines().count();
+    let mut numbers1 = Vec::with_capacity(line_count);
+    let mut numbers2 = Vec::with_capacity(line_count);
+
+    let bytes = input.as_bytes();
+    let mut pos = 0;
+
+    while pos < bytes.len() {
+        // Parse first number
+        let mut num = 0u32;
+        while pos < bytes.len() && bytes[pos].is_ascii_digit() {
+            // Convert ASCII digit to number and accumulate
+            num = (num * 10) + (bytes[pos] - b'0') as u32;
+            pos += 1;
+        }
+        numbers1.push(num);
+
+        // We know we have 3 spaces, so just add 3
+        pos += 1;
+
+        // Parse second number
+        num = 0;
+        while pos < bytes.len() && bytes[pos].is_ascii_digit() {
+            // Convert ASCII digit to number and accumulate
+            num = (num * 10) + (bytes[pos] - b'0') as u32;
+            pos += 1;
+        }
+        numbers2.push(num);
+
+        // Skip newline character
+        pos += 1;
+    }
+
+    (numbers1, numbers2)
+}
+
 pub fn part1_v0(input: &str) -> u32 {
-    let (mut numbers1, mut numbers2) = input_generator(input);
+    let (mut numbers1, mut numbers2) = input_generator_v1(input);
     numbers1.sort_unstable();
     numbers2.sort_unstable();
 
@@ -37,7 +79,7 @@ pub fn part1(input: &str) -> u32 {
 }
 
 pub fn part2_v0(input: &str) -> u32 {
-    let (numbers1, numbers2) = input_generator(input);
+    let (numbers1, numbers2) = input_generator_v1(input);
     let (numbers1, numbers2): (HashMap<u32, u32>, HashMap<u32, u32>) =
         numbers1.into_iter().zip(numbers2).fold(
             (HashMap::new(), HashMap::new()),
@@ -62,9 +104,27 @@ pub fn part2_v0(input: &str) -> u32 {
         .sum()
 }
 
+pub fn part2_v1(input: &str) -> u32 {
+    let (numbers1, numbers2) = input_generator_v1(input);
+    let rows = input.len();
+
+    let n1: HashMap<u32, u32> =
+        numbers1
+            .into_iter()
+            .fold(HashMap::with_capacity(rows), |mut map, n| {
+                *map.entry(n).or_default() += 1;
+                map
+            });
+
+    numbers2
+        .into_iter()
+        .filter_map(|n| n1.get(&n).map(|&count1| n * count1))
+        .sum()
+}
+
 #[aoc(day1, part2)]
 pub fn part2(input: &str) -> u32 {
-    part2_v0(input)
+    part2_v1(input)
 }
 
 #[cfg(test)]

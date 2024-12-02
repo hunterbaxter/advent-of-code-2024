@@ -15,5 +15,5 @@ name = "fib"
 harness = false
 
 [[bench]]
-name = "day01"
+name = "day01_bench"
 harness = false
